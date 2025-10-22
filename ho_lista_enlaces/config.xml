@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+	<name>ho_lista_enlaces</name>
+	<displayName><![CDATA[hoListaEnlaces]]></displayName>
+	<version><![CDATA[1.0.0]]></version>
+	<description><![CDATA[Da mayor visibilidad a tu contenido y páginas estáticas para aumentar el interés de tus visitantes.]]></description>
+	<author><![CDATA[Xurxo]]></author>
+	<tab><![CDATA[front_office_features]]></tab>
+	<is_configurable>1</is_configurable>
+	<need_instance>1</need_instance>
+</module>
