@@ -25,3 +25,14 @@
 * Don't forget to prefix your containers with your own identifier
 * to avoid any conflicts with others containers.
 */
+
+#HO_LISTA_ENLACES_HOOK{
+  height: auto !important;
+  width: 58% !important;
+}
+
+.bootstrap .fixed-width-xl{
+  height: 125px !important;
+  width: 50% !important;
+}
+
