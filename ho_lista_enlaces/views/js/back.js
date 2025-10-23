@@ -27,25 +27,49 @@
 */
 
 $(document).ready(function() {
-    let contador = 0; // Contador para los nombres de los inputs
+  // ===== Funcionalidad boton Añadir enlace =====
+  let contador = 0; // Contador para los nombres de los inputs
 
-    $('#addCustomLink').on('click', function() {
-        contador++;
+  $('#addCustomLink').on('click', function() {
+    contador++;
 
-        // Crear un bloque de inputs
-        const html = `
-          <div class="custom-link-block" style="margin: 10px 0 10px 0;">
-            <input type="text" name="HO_LISTA_ENLACES_CUSTOM_NAME_NEW[${contador}]" placeholder="Nombre del enlace" class="form-control" style="width:45%; display:inline-block; margin-right:5px;">
-            <input type="text" name="HO_LISTA_ENLACES_CUSTOM_URL_NEW[${contador}]" placeholder="URL" class="form-control" style="width:45%; display:inline-block; margin-right:5px;">
-            <button type="button" class="btn btn-danger eliminarEnlace">Eliminar</button>
-          </div>
-        `;
+    // Crear un bloque de inputs
+    const html = `
+      <div class="custom-link-block" style="margin: 10px 0 10px 0;">
+        <input type="text" name="HO_LISTA_ENLACES_CUSTOM_NAME_NEW[${contador}]" placeholder="Nombre del enlace" class="form-control" style="width:45%; display:inline-block; margin-right:5px;">
+        <input type="text" name="HO_LISTA_ENLACES_CUSTOM_URL_NEW[${contador}]" placeholder="URL" class="form-control" style="width:45%; display:inline-block; margin-right:5px;">
+        <button type="button" class="btn btn-danger eliminarEnlace">Eliminar</button>
+      </div>
+    `;
 
-        $('#addCustomLink').before(html);
+    $('#addCustomLink').before(html);
+  });
+
+  // Eliminar enlace dinámico
+  $(document).on('click', '.eliminarEnlace', function() {
+      $(this).closest('.custom-link-block').remove();
+  });
+
+  // ===== Desplegar / contraer secciones =====
+  $(document).on('click', '.ho-collapsible-header', function() {
+    const parent = $(this).closest('.ho-collapsible');
+    const content = parent.find('.ho-collapsible-content');
+    content.slideToggle(200);
+    parent.toggleClass('open');
+  });
+
+  // --- Marcar seleccionados si estaban guardados ---
+  const valoresGuardados = {
+    CMS: JSON.parse($('input[name="HO_LISTA_ENLACES_URL_CMS_hidden"]').val() || '[]'),
+    PRODUCTOS: JSON.parse($('input[name="HO_LISTA_ENLACES_URL_PRODUCTOS_hidden"]').val() || '[]'),
+    CATEGORIAS: JSON.parse($('input[name="HO_LISTA_ENLACES_URL_CATEGORIAS_hidden"]').val() || '[]'),
+    ESTATICOS: JSON.parse($('input[name="HO_LISTA_ENLACES_URL_ESTATICOS_hidden"]').val() || '[]')
+  };
+
+  $.each(valoresGuardados, function(grupo, valores) {
+    valores.forEach(function(v) {
+      $('input[name="HO_LISTA_ENLACES_URL_' + grupo + '[]"][value="' + v + '"]').prop('checked', true);
     });
+  });
 
-    // Eliminar enlace dinámico
-    $(document).on('click', '.eliminarEnlace', function() {
-        $(this).closest('.custom-link-block').remove();
-    });
 });

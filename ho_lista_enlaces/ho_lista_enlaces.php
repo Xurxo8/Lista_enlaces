@@ -273,22 +273,36 @@ class Ho_lista_enlaces extends Module {
 
     // Secciones con listas deplegables
     foreach ($grupos as $key => $grupo) {
-      $inputs[] = [
-        'type' => 'select',
-        'desc' => 'Ctrl + click para seleccionar varios',
-        'label' => $grupo['titulo'],
-        'name' => 'HO_LISTA_ENLACES_URL_' . strtoupper($key) . '[]',
-        'multiple' => true,
-        'options' => [
-          'query' => array_merge(
-            [['id_option' => '', 'name' => $this->l('')]],
-            $grupo['enlaces']
-          ),
-          'id' => 'id_option',
-          'name' => 'name', 
-        ],
-      ];
+    $checkbox_html = '
+      <div class="ho-collapsible">
+        <div class="ho-collapsible-header">
+          <strong>' . $grupo['titulo'] . '</strong> <span class="toggle-icon">+</span>
+        </div>
+        <div class="ho-collapsible-content" style="display:none; margin-left:15px;">
+    ';
+
+    foreach ($grupo['enlaces'] as $enlace) {
+        $checkbox_html .= '
+          <div>
+            <label>
+              <input type="checkbox" 
+                     name="HO_LISTA_ENLACES_URL_' . strtoupper($key) . '[]" 
+                     value="' . $enlace['id_option'] . '"
+                     class="ho-checkbox-' . $key . '"> 
+              ' . $enlace['name'] . '
+            </label>
+          </div>';
     }
+
+    $checkbox_html .= '</div></div>';
+
+    $inputs[] = [
+        'type' => 'html',
+        'name' => 'checkbox_group_' . $key,
+        'html_content' => $checkbox_html,
+    ];
+}
+
 
     // Boton para crar los enlaces personalizado
     $inputs[] = [
