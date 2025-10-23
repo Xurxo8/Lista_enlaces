@@ -290,23 +290,17 @@ class Ho_lista_enlaces extends Module {
       ];
     }
 
-    // Más adelante meteremos aquí los enlaces personalizados
+    // Boton para crar los enlaces personalizado
     $inputs[] = [
-      'col' => 3,
-      'type' => 'text',
-      'label' => $this->l('Añadir enlace personalizado'),
-      'name' => 'HO_LISTA_ENLACES_CUSTOM_URL',
-      'desc' => $this->l('Introduce una URL externa o interna'),
-    ];
-    $inputs[] = [
-      'col' => 3,
-      'type' => 'text',
-      'label' => $this->l('Nombre del enlace personalizado'),
-      'name' => 'HO_LISTA_ENLACES_CUSTOM_NAME',
-      'desc' => $this->l('Texto que se mostrará en el enlace'),
+      'type' => 'html',
+      'name' => 'add_custom_link_button',
+      'html_content' => '<button type="button" id="addCustomLink" class="btn btn-default" style="margin-top:10px;">
+        '.$this->l('Añadir enlace personalizado').'
+      </button>
+      <div id="customLinksContainer" style="margin-top:10px;"></div>',
     ];
 
-    // Formulario del back office
+    // ========== DEVOLVER EL FORMULARIO COMPLETO ==========
     return [
       'form' => [
           'legend' => [
@@ -314,6 +308,7 @@ class Ho_lista_enlaces extends Module {
             'icon' => 'icon-cogs',
           ],
           'input' => $inputs,
+          'button' => ['algo' => $this->l('Añadir enlace personalizado')],
           'submit' => ['title' => $this->l('Guardar')],
         ],
     ];
@@ -349,10 +344,24 @@ class Ho_lista_enlaces extends Module {
     }
 
     // Enlaces personalizados
-    $customUrl = Tools::getValue('HO_LISTA_ENLACES_CUSTOM_URL');
-    $customName = Tools::getValue('HO_LISTA_ENLACES_CUSTOM_NAME');
-    if (!empty($customUrl) && !empty($customName)) {
-      Configuration::updateValue('HO_LISTA_ENLACES_CUSTOM', json_encode(['url' => $customUrl, 'name' => $customName]));
+    $urlsPersonalizados = Tools::getValue('HO_LISTA_ENLACES_CUSTOM_URL_NEW', []);
+    $nombresPersonalizados = Tools::getValue('HO_LISTA_ENLACES_CUSTOM_NAME_NEW', []);
+    $enlacesPersonalizados = [];
+
+    if (!empty($urlsPersonalizados)) {
+      foreach ($urlsPersonalizados as $clave => $url) {
+        $nombre = $nombresPersonalizados[$clave] ?? '';
+        if (!empty($url) && !empty($nombre)) {
+          $enlacesPersonalizados[] = [
+            'url' => $url,
+            'nombre' => $nombre
+          ];
+        }
+      }
+    }
+
+    if (!empty($enlacesPersonalizados)) {
+      Configuration::updateValue('HO_LISTA_ENLACES_PERSONALIZADOS', json_encode($enlacesPersonalizados));
     }
   }
 

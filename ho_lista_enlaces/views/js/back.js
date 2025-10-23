@@ -25,3 +25,27 @@
 * Don't forget to prefix your containers with your own identifier
 * to avoid any conflicts with others containers.
 */
+
+$(document).ready(function() {
+    let contador = 0; // Contador para los nombres de los inputs
+
+    $('#addCustomLink').on('click', function() {
+        contador++;
+
+        // Crear un bloque de inputs
+        const html = `
+          <div class="custom-link-block" style="margin: 10px 0 10px 0;">
+            <input type="text" name="HO_LISTA_ENLACES_CUSTOM_NAME_NEW[${contador}]" placeholder="Nombre del enlace" class="form-control" style="width:45%; display:inline-block; margin-right:5px;">
+            <input type="text" name="HO_LISTA_ENLACES_CUSTOM_URL_NEW[${contador}]" placeholder="URL" class="form-control" style="width:45%; display:inline-block; margin-right:5px;">
+            <button type="button" class="btn btn-danger eliminarEnlace">Eliminar</button>
+          </div>
+        `;
+
+        $('#addCustomLink').before(html);
+    });
+
+    // Eliminar enlace dinámico
+    $(document).on('click', '.eliminarEnlace', function() {
+        $(this).closest('.custom-link-block').remove();
+    });
+});
