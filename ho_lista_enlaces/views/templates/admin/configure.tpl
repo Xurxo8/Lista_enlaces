@@ -26,15 +26,39 @@
 {* Panel en el que mostraremos las listas de enlaces *}
 {* Las agruparemos segun el hook al que estén enganchadas *}
 <div class="panel">
-	<h3><i class="icon icon-credit-card"></i> {l s='hoListaEnlaces' mod='ho_lista_enlaces'}</h3>
-	<p>
-		<strong>{l s='Here is my new generic module!' mod='ho_lista_enlaces'}</strong><br />
-		{l s='Thanks to PrestaShop, now I have a great module.' mod='ho_lista_enlaces'}<br />
-		{l s='I can configure it using the following configuration form.' mod='ho_lista_enlaces'}
-	</p>
-	<br />
-	<p>
-		{l s='This module will boost your sales!' mod='ho_lista_enlaces'}
-	</p>
+	<h3>Listas de enlaces existentes</h3>
+
+  <div id="contenedorBloques">
+    {if $listasPorHook|@count > 0}
+      {foreach from=$listasPorHook key=hook item=listas}
+        <div id="hook_{$hook}" class="hook-block" style="">
+          <h4>Hook: {$hook}</h4>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre del bloque</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+                {foreach from=$listas item=lista}
+                  <tr>
+                    <td>{$lista.id_lista}</td>
+                    <td>{$lista.nombre}</td>
+                    <td>
+                      <a href="{$link->getAdminLink('AdminModules')}&configure={$module_name}&id_lista={$lista.id_lista}&action=edit" class="btn btn-default btn-sm">Editar</a>
+                      <a href="{$link->getAdminLink('AdminModules')}&configure={$module_name}&id_lista={$lista.id_lista}&action=delete" class="btn btn-danger btn-sm">Eliminar</a>
+                    </td>
+                  </tr>
+                {/foreach}
+            </tbody>
+          </table>
+        </div>
+      {/foreach}
+    {else}
+      <p>No hay listas creadas todavía.</p>
+    {/if}
+  </div>
 </div>
 

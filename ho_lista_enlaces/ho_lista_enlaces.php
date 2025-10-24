@@ -92,27 +92,57 @@ class Ho_lista_enlaces extends Module {
   }
 
   /**
+   * Recuperar las listas de la base de datos
+   */
+  private function getAllLists() {
+    $sql = 'SELECT * FROM `'._DB_PREFIX_.'lista_enlaces` ORDER BY `id_lista` ASC';
+    return Db::getInstance()->executeS($sql);
+  }
+
+  /**
   * Carga el formulario de configuración
   */
   public function getContent() {
-    /**
-    * Si se han enviado valores en el formulario, procesarlos.
-    */
+    // Si se han enviado valores en el formulario, procesarlos.
     if (((bool)Tools::isSubmit('submitHo_lista_enlacesModule')) == true) {
       $this->postProcess();
     }
 
-    $this->context->smarty->assign('module_dir', $this->_path);
+    // Cargar formulario
+    $formulario = $this->renderForm();
 
-    $output = $this->context->smarty->fetch($this->local_path.'views/templates/admin/configure.tpl');
+    // Cargar listas desde la base de datos
+    $listas = $this->getAllLists();
 
-    return $this->renderForm().$output;
+    // Agrupar listas por hook
+    $listasPorHook = [];
+    foreach ($listas as $lista) {
+      $hook = $lista['hook'] ?: 'sin_hook';
+      
+      if (!isset($listasPorHook[$hook])) {
+        $listasPorHook[$hook] = [];
+      }
+
+      $listasPorHook[$hook][] = $lista;
+    }
+
+    // Asignar variables a Smarty
+    $this->context->smarty->assign([
+      'module_dir' => $this->_path,
+      'listasPorHook' => $listasPorHook,
+      'link' => $this->context->link,
+      'module_name' => $this->name
+    ]);
+
+    // Cargar la plantilla
+    $plantilla = $this->context->smarty->fetch($this->local_path.'views/templates/admin/configure.tpl');
+
+    return $formulario.$plantilla;
   }
 
   /**
   * Crea el formulario que se mostrará en la configuración del módulo
   */
-
   protected function renderForm() {
     $helper = new HelperFormExtended();
 

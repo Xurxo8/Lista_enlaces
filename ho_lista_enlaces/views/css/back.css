@@ -72,4 +72,18 @@
   transform: rotate(45deg);
 }
 
+/* ===== BLOQUES CON LAS LISTA DE ENLACES ===== */
+#contenedorBloques{
+  width: 80%;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 50px;
+  margin: auto;
 
+  & .hook-block{
+    width: 30%; 
+    border: 1px solid #ddd; 
+    padding:10px;
+  }
+}
