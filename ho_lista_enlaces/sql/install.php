@@ -58,8 +58,8 @@ $sql[] = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'lista_enlace_relacion` (
 
 /* Ejecutar todas las sentencias SQL */
 foreach ($sql as $query) {
-    if (!Db::getInstance()->execute($query)) {
-        return false;
-    }
+  if (!Db::getInstance()->execute($query)) {
+    return false;
+  }
 }
 

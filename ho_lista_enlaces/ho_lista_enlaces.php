@@ -367,16 +367,70 @@ class Ho_lista_enlaces extends Module {
   }
 
   /**
+   * Devuelve el nombre del enlace según la URL y el grupo
+   */
+  private function getTitleFromUrl($grupo, $url) {
+    $gruposEnlaces = $this->getEnlacesAgrupados(); // ya tienes este método
+    $key = strtolower($grupo);
+
+    if (isset($gruposEnlaces[$key]['enlaces'])) {
+      foreach ($gruposEnlaces[$key]['enlaces'] as $enlace) {
+        if ($enlace['id_option'] == $url) {
+          return $enlace['name'];
+        }
+      }
+    }
+
+    // Si no encuentra el nombre, devolver la URL como fallback
+    return $url;
+  }
+
+  /**
   * Guardar los datos del formulario
   */
   protected function postProcess() {
-    Configuration::updateValue('HO_LISTA_ENLACES_HOOK', Tools::getValue('HO_LISTA_ENLACES_HOOK'));
-    Configuration::updateValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE', Tools::getValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE'));
+    // Cuando el usuario envia el formulario, primero creamos o actualizamos la lista
+    $id_lista = (int)Tools::getValue('HO_LISTA_ENLACES_ID_LISTA');
+
+    if ($id_lista) {
+      // Actualizar lista existente
+      Db::getInstance()->update('lista_enlaces', [
+        'nombre' => pSQL(Tools::getValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE')),
+        'hook'   => pSQL(Tools::getValue('HO_LISTA_ENLACES_HOOK')),
+      ], 'id_lista = '.$id_lista);
+
+      // Borrar relaciones antiguas de la lista antes de insertar las nuevas para evitar duplicados
+      Db::getInstance()->delete('lista_enlace_relacion', 'id_lista = '.(int)$id_lista);
+
+    }else{
+      // Crear nueva lista
+      Db::getInstance()->insert('lista_enlaces', [
+        'nombre' => pSQL(Tools::getValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE')),
+        'hook'   => pSQL(Tools::getValue('HO_LISTA_ENLACES_HOOK')),
+      ]);
+      $id_lista = Db::getInstance()->Insert_ID();
+    }
 
     $grupos = ['CMS', 'PRODUCTOS', 'CATEGORIAS', 'ESTATICOS'];
+    
     foreach ($grupos as $grupo) {
-      $valores = Tools::getValue('HO_LISTA_ENLACES_URL_' . $grupo, []);
-      Configuration::updateValue('HO_LISTA_ENLACES_URL_' . $grupo, json_encode($valores));
+      $urls = Tools::getValue('HO_LISTA_ENLACES_URL_'.$grupo, []);
+      foreach ($urls as $pos => $url) {
+        $nombre = $this->getTitleFromUrl($grupo, $url);
+        Db::getInstance()->insert('enlace', [
+          'nombre' => pSQL($nombre),
+          'url'    => pSQL($url),
+          'posicion' => (int)$pos
+        ]);
+        $id_enlace = Db::getInstance()->Insert_ID();
+
+        // Relacionar con la lista
+        Db::getInstance()->insert('lista_enlace_relacion', [
+          'id_lista' => (int)$id_lista,
+          'id_enlace' => (int)$id_enlace,
+          'posicion' => (int)$pos
+        ]);
+      }
     }
 
     // Enlaces personalizados
@@ -384,18 +438,33 @@ class Ho_lista_enlaces extends Module {
     $nombresPersonalizados = Tools::getValue('HO_LISTA_ENLACES_CUSTOM_NAME_NEW', []);
     $enlacesPersonalizados = [];
 
-    if (!empty($urlsPersonalizados)) {
-      foreach ($urlsPersonalizados as $clave => $url) {
-        $nombre = $nombresPersonalizados[$clave] ?? '';
-        if (!empty($url) && !empty($nombre)) {
-          $enlacesPersonalizados[] = [
-            'url' => $url,
-            'nombre' => $nombre
-          ];
-        }
+    foreach ($urlsPersonalizados as $pos => $url) {
+      $nombre = $nombresPersonalizados[$pos] ?? '';
+      if (!empty($url) && !empty($nombre)) {
+        // Guardar en array para configuracion
+        $enlacesPersonalizados[] = [
+          'url' => $url,
+          'nombre' => $nombre
+        ];
+
+        // Guardar en la tabla 'enlace
+        Db::getInstance()->insert('enlace', [
+          'nombre' => pSQL($nombre),
+          'url'    => pSQL($url),
+          'posicion' => (int)$pos
+        ]);
+        $id_enlace = Db::getInstance()->Insert_ID();
+
+        // Relacionar con la tabla
+        Db::getInstance()->insert('lista_enlace_relacion', [
+          'id_lista' => (int)$id_lista,
+          'id_enlace' => (int)$id_enlace,
+          'posicion' => (int)$pos
+        ]);
       }
     }
 
+    // Guardar los enlaces personalizados Configuracion
     if (!empty($enlacesPersonalizados)) {
       Configuration::updateValue('HO_LISTA_ENLACES_PERSONALIZADOS', json_encode($enlacesPersonalizados));
     }
