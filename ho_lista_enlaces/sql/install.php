@@ -23,15 +23,43 @@
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
-$sql = array();
+$sql = [];
 
-$sql[] = 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'ho_lista_enlaces` (
-    `id_ho_lista_enlaces` int(11) NOT NULL AUTO_INCREMENT,
-    PRIMARY KEY  (`id_ho_lista_enlaces`)
-) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=utf8;';
+/* Tabla de enlaces individuales */
+$sql[] = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'enlace` (
+  `id_enlace` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(255) NOT NULL,
+  `url` VARCHAR(512) NOT NULL,
+  `nueva_ventana` TINYINT(1) NOT NULL DEFAULT 0,
+  `posicion` INT UNSIGNED DEFAULT 0,
+  PRIMARY KEY (`id_enlace`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;';
 
+/* Tabla principal de listas de enlaces */
+$sql[] = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'lista_enlaces` (
+  `id_lista` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(255) NOT NULL,
+  `hook` VARCHAR(64) DEFAULT NULL,
+  `posicion` INT UNSIGNED DEFAULT 0,
+  PRIMARY KEY (`id_lista`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;';
+
+/* Relación N:N entre listas y enlaces */
+$sql[] = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'lista_enlace_relacion` (
+  `id_lista` INT UNSIGNED NOT NULL,
+  `id_enlace` INT UNSIGNED NOT NULL,
+  `posicion` INT UNSIGNED DEFAULT 0,
+  PRIMARY KEY (`id_lista`, `id_enlace`),
+  CONSTRAINT `fk_relacion_lista` FOREIGN KEY (`id_lista`)
+    REFERENCES `'._DB_PREFIX_.'lista_enlaces` (`id_lista`) ON DELETE CASCADE,
+  CONSTRAINT `fk_relacion_enlace` FOREIGN KEY (`id_enlace`)
+    REFERENCES `'._DB_PREFIX_.'enlace` (`id_enlace`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;';
+
+/* Ejecutar todas las sentencias SQL */
 foreach ($sql as $query) {
-    if (Db::getInstance()->execute($query) == false) {
+    if (!Db::getInstance()->execute($query)) {
         return false;
     }
 }
+

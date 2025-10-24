@@ -23,6 +23,8 @@
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
+{* Panel en el que mostraremos las listas de enlaces *}
+{* Las agruparemos segun el hook al que estén enganchadas *}
 <div class="panel">
 	<h3><i class="icon icon-credit-card"></i> {l s='hoListaEnlaces' mod='ho_lista_enlaces'}</h3>
 	<p>
@@ -36,13 +38,3 @@
 	</p>
 </div>
 
-<div class="panel">
-	<h3><i class="icon icon-tags"></i> {l s='Documentation' mod='ho_lista_enlaces'}</h3>
-	<p>
-		&raquo; {l s='You can get a PDF documentation to configure this module' mod='ho_lista_enlaces'} :
-		<ul>
-			<li><a href="#" target="_blank">{l s='English' mod='ho_lista_enlaces'}</a></li>
-			<li><a href="#" target="_blank">{l s='French' mod='ho_lista_enlaces'}</a></li>
-		</ul>
-	</p>
-</div>

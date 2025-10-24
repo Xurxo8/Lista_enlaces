@@ -28,6 +28,11 @@ if (!defined('_PS_VERSION_')) {
   exit;
 }
 
+ // Extiende HelperForm y declara la propiedad para evitar el warning
+class HelperFormExtended extends HelperForm {
+  public $class;
+}
+
 class Ho_lista_enlaces extends Module {
   protected $config_form = false;
 
@@ -58,12 +63,26 @@ class Ho_lista_enlaces extends Module {
   * http://doc.prestashop.com/display/PS16/Enabling+the+Auto-Update
   */
   public function install() {
-    include(dirname(__FILE__).'/sql/install.php');
+    // Ejecutar intalación base del módulo
+    if(!parent::install()){
+      return false;
+    }
 
-    return parent::install() &&
-      $this->registerHook('header') &&
-      $this->registerHook('displayBackOfficeHeader') &&
-      $this->registerHook('displayFooter');
+    // Ejectuar el SQL de instlación
+    if(!include(dirname(__FILE__).'/sql/install.php')){
+      return false;
+    }
+
+    // Registrar hooks necesarios
+    if(
+      !$this->registerHook('header') ||
+      !$this->registerHook('displayBackOfficeHeader') ||
+      !$this->registerHook('displayFooter')
+    ){
+      return false;
+    }
+
+    return true;      
   }
 
   public function uninstall() {
@@ -93,8 +112,9 @@ class Ho_lista_enlaces extends Module {
   /**
   * Crea el formulario que se mostrará en la configuración del módulo
   */
+
   protected function renderForm() {
-    $helper = new HelperForm();
+    $helper = new HelperFormExtended();
 
     $helper->show_toolbar = false;
     $helper->table = $this->table;
@@ -114,7 +134,7 @@ class Ho_lista_enlaces extends Module {
       'id_language' => $this->context->language->id,
     );
 
-    // Id para el formulario
+    // Luego, en renderForm(), instancias la clase extendida
     $helper->id = 'ho_lista_enlaces_form';
     $helper->class = 'ho_lista_enlaces_form_class';
 
@@ -301,7 +321,7 @@ class Ho_lista_enlaces extends Module {
         'name' => 'checkbox_group_' . $key,
         'html_content' => $checkbox_html,
     ];
-}
+    }
 
 
     // Boton para crar los enlaces personalizado
@@ -332,15 +352,17 @@ class Ho_lista_enlaces extends Module {
   * Establece los valores de los inputs
   */
   protected function getConfigFormValues() {
+    $custom = json_decode(Configuration::get('HO_LISTA_ENLACES_CUSTOM', '{}'), true) ?: [];
+
     return [
-      'HO_LISTA_ENLACES_HOOK' => Configuration::get('HO_LISTA_ENLACES_HOOK', null),
-      'HO_LISTA_ENLACES_NOMBRE_BLOQUE' => Configuration::get('HO_LISTA_ENLACES_NOMBRE_BLOQUE', null),
+      'HO_LISTA_ENLACES_HOOK' => Configuration::get('HO_LISTA_ENLACES_HOOK', null) ?? '',
+      'HO_LISTA_ENLACES_NOMBRE_BLOQUE' => Configuration::get('HO_LISTA_ENLACES_NOMBRE_BLOQUE', null)  ?? '',
       'HO_LISTA_ENLACES_URL_CMS' => json_decode(Configuration::get('HO_LISTA_ENLACES_URL_CMS', '[]'), true),
       'HO_LISTA_ENLACES_URL_PRODUCTOS' => json_decode(Configuration::get('HO_LISTA_ENLACES_URL_PRODUCTOS', '[]'), true),
       'HO_LISTA_ENLACES_URL_CATEGORIAS' => json_decode(Configuration::get('HO_LISTA_ENLACES_URL_CATEGORIAS', '[]'), true),
       'HO_LISTA_ENLACES_URL_ESTATICOS' => json_decode(Configuration::get('HO_LISTA_ENLACES_URL_ESTATICOS', '[]'), true),
-      'HO_LISTA_ENLACES_CUSTOM_URL' => json_decode(Configuration::get('HO_LISTA_ENLACES_CUSTOM', '{}'), true)['url'] ?? '',
-      'HO_LISTA_ENLACES_CUSTOM_NAME' => json_decode(Configuration::get('HO_LISTA_ENLACES_CUSTOM', '{}'), true)['name'] ?? '',
+      'HO_LISTA_ENLACES_CUSTOM_URL' => $custom['url'] ?? '',
+      'HO_LISTA_ENLACES_CUSTOM_NAME' => $custom['name'] ?? '',
     ];
   }
 
