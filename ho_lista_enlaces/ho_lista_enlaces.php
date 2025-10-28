@@ -100,10 +100,50 @@ class Ho_lista_enlaces extends Module {
   }
 
   /**
+  * Elimina una lista y sus relaciones
+  *
+  * @param int $idLista ID de la lista a eliminar
+  * @return bool true si se eliminó correctamente, false en caso contrario
+  */
+  private function deleteList($idLista) {
+    if (!$idLista) {
+      return false;
+    }
+
+    // Eliminar la lista, las relaciones se eliminan automáticamente gracias a ON DELETE CASCADE
+    $deleted = Db::getInstance()->delete('lista_enlaces', 'id_lista = '.(int)$idLista);
+
+    if ($deleted) {
+      // Mensaje de confirmación en BO
+      $this->context->controller->confirmations[] = $this->l('Lista eliminada correctamente.');
+    } else {
+      // Mensaje de error
+      $this->context->controller->errors[] = $this->l('No se pudo eliminar la lista.');
+    }
+
+    return $deleted;
+  }
+
+  /**
   * Carga el formulario de configuración
   */
   public function getContent() {
-    // Si se han enviado valores en el formulario, procesarlos.
+    $idLista = (int)Tools::getValue('id_lista');
+    $hoDelete = Tools::getValue('ho_delete');
+    $token = Tools::getAdminTokenLite('AdminModules');
+
+
+    // Si viene una petición de borrado comprobamos token y ejecutamos
+    if ($hoDelete === 'delete' && $idLista) {
+      // Comprobación básica del token de backoffice
+      if($hoDelete === 'delete' && $idLista){
+        $this->deleteList($idLista);
+      }else{
+        $this->context->controller->errors[] = $this->l('Token de seguridad inválido');
+      }
+    }
+
+    // Procesar formulario si se envio
     if (((bool)Tools::isSubmit('submitHo_lista_enlacesModule')) == true) {
       $this->postProcess();
     }
@@ -118,11 +158,9 @@ class Ho_lista_enlaces extends Module {
     $listasPorHook = [];
     foreach ($listas as $lista) {
       $hook = $lista['hook'] ?: 'sin_hook';
-      
       if (!isset($listasPorHook[$hook])) {
         $listasPorHook[$hook] = [];
       }
-
       $listasPorHook[$hook][] = $lista;
     }
 
@@ -131,7 +169,8 @@ class Ho_lista_enlaces extends Module {
       'module_dir' => $this->_path,
       'listasPorHook' => $listasPorHook,
       'link' => $this->context->link,
-      'module_name' => $this->name
+      'module_name' => $this->name,
+      'token' => $token, 
     ]);
 
     // Cargar la plantilla
@@ -254,7 +293,6 @@ class Ho_lista_enlaces extends Module {
     return $productoArray;
   }
 
-
   // ============================================
   // Obtener los enlaces "báscicos"
   // ============================================
@@ -289,8 +327,7 @@ class Ho_lista_enlaces extends Module {
         'enlaces' => $this->getEnlacesBasicos(),
       ],
     ];
-  }
- 
+  } 
 
   /**
   * Crea la estructura de tu formulario
@@ -420,17 +457,17 @@ class Ho_lista_enlaces extends Module {
   */
   protected function postProcess() {
     // Cuando el usuario envia el formulario, primero creamos o actualizamos la lista
-    $id_lista = (int)Tools::getValue('HO_LISTA_ENLACES_ID_LISTA');
+    $idLista = (int)Tools::getValue('HO_LISTA_ENLACES_ID_LISTA');
 
-    if ($id_lista) {
+    if ($idLista) {
       // Actualizar lista existente
       Db::getInstance()->update('lista_enlaces', [
         'nombre' => pSQL(Tools::getValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE')),
         'hook'   => pSQL(Tools::getValue('HO_LISTA_ENLACES_HOOK')),
-      ], 'id_lista = '.$id_lista);
+      ], 'id_lista = '.$idLista);
 
       // Borrar relaciones antiguas de la lista antes de insertar las nuevas para evitar duplicados
-      Db::getInstance()->delete('lista_enlace_relacion', 'id_lista = '.(int)$id_lista);
+      Db::getInstance()->delete('lista_enlace_relacion', 'id_lista = '.(int)$idLista);
 
     }else{
       // Crear nueva lista
@@ -438,7 +475,7 @@ class Ho_lista_enlaces extends Module {
         'nombre' => pSQL(Tools::getValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE')),
         'hook'   => pSQL(Tools::getValue('HO_LISTA_ENLACES_HOOK')),
       ]);
-      $id_lista = Db::getInstance()->Insert_ID();
+      $idLista = Db::getInstance()->Insert_ID();
     }
 
     $grupos = ['CMS', 'PRODUCTOS', 'CATEGORIAS', 'ESTATICOS'];
@@ -456,7 +493,7 @@ class Ho_lista_enlaces extends Module {
 
         // Relacionar con la lista
         Db::getInstance()->insert('lista_enlace_relacion', [
-          'id_lista' => (int)$id_lista,
+          'id_lista' => (int)$idLista,
           'id_enlace' => (int)$id_enlace,
           'posicion' => (int)$pos
         ]);
@@ -487,7 +524,7 @@ class Ho_lista_enlaces extends Module {
 
         // Relacionar con la tabla
         Db::getInstance()->insert('lista_enlace_relacion', [
-          'id_lista' => (int)$id_lista,
+          'id_lista' => (int)$idLista,
           'id_enlace' => (int)$id_enlace,
           'posicion' => (int)$pos
         ]);

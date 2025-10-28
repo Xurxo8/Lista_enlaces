@@ -48,7 +48,11 @@
                     <td>{$lista.nombre}</td>
                     <td>
                       <a href="{$link->getAdminLink('AdminModules')}&configure={$module_name}&id_lista={$lista.id_lista}&action=edit" class="btn btn-default btn-sm">Editar</a>
-                      <a href="{$link->getAdminLink('AdminModules')}&configure={$module_name}&id_lista={$lista.id_lista}&action=delete" class="btn btn-danger btn-sm">Eliminar</a>
+                      <a href="{$link->getAdminLink('AdminModules')}&configure={$module_name}&id_lista={$lista.id_lista}&ho_delete=delete&token={$token}" 
+                        class="btn btn-danger btn-sm"
+                        onclick="return confirm('¿Seguro que desea eliminar esta lista?');">
+                        Eliminar
+                      </a>
                     </td>
                   </tr>
                 {/foreach}
