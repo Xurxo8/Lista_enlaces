@@ -125,25 +125,86 @@ class Ho_lista_enlaces extends Module {
   }
 
   /**
+  * Carga los datos de una lista para edición y los inyecta en Configuration
+  *
+  * @param int $idLista
+  * @return bool
+  */
+  private function editarLista($idLista){
+    if (!$idLista) {
+      $this->context->controller->errors[] = $this->l('ID de lista no válido.');
+      return false;
+    }
+
+    // Cargar lista
+    $lista = Db::getInstance()->getRow('
+      SELECT * FROM `'._DB_PREFIX_.'lista_enlaces`
+      WHERE `id_lista` = '.(int)$idLista
+    );
+
+    // Cargar los enlaces de la lista
+    $enlacesSeleccionados = Db::getInstance()->executeS('
+      SELECT e.url
+      FROM `'._DB_PREFIX_.'enlace` e
+      INNER JOIN `'._DB_PREFIX_.'lista_enlace_relacion` rel
+        ON e.id_enlace = rel.id_enlace
+      WHERE rel.id_lista = '.(int)$idLista
+    );
+
+    $urlsSeleccionadas = array_column($enlacesSeleccionados, 'url');
+    Configuration::updateValue('HO_LISTA_ENLACES_URL_SELECCIONADAS', json_encode($urlsSeleccionadas));
+
+    // Cargar los IDs de los enlaces asociados a la lista
+    $enlacesSeleccionados = Db::getInstance()->executeS('
+      SELECT id_enlace 
+      FROM `'._DB_PREFIX_.'lista_enlace_relacion`
+      WHERE id_lista = '.(int)$idLista
+    );
+
+    $idsEnlaces = array_column($enlacesSeleccionados, 'id_enlace');
+    Configuration::updateValue('HO_LISTA_ENLACES_IDS', implode(',', $idsEnlaces));
+
+    if (!$lista) {
+      $this->context->controller->errors[] = $this->l('No se encontró la lista seleccionada.');
+      return false;
+    }
+
+    // Guardamos los datos en configuración temporal (para que el formulario se precargue)
+    Configuration::updateValue('HO_LISTA_ENLACES_ID_LISTA', (int)$lista['id_lista']);
+    Configuration::updateValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE', pSQL($lista['nombre']));
+    Configuration::updateValue('HO_LISTA_ENLACES_HOOK', pSQL($lista['hook']));
+
+    $this->context->controller->confirmations[] =
+      sprintf($this->l('Editando la lista "%s". Modifique los valores y guarde para aplicar los cambios.'), $lista['nombre']);
+
+    return true;
+  }
+
+  /**
   * Carga el formulario de configuración
   */
   public function getContent() {
     $idLista = (int)Tools::getValue('id_lista');
-    $hoDelete = Tools::getValue('ho_delete');
-    $token = Tools::getAdminTokenLite('AdminModules');
+    $accion = Tools::getValue('accion');
+    $token = Tools::getValue('token');
+    $tokenEsperado = Tools::getAdminTokenLite('AdminModules');
 
-
-    // Si viene una petición de borrado comprobamos token y ejecutamos
-    if ($hoDelete === 'delete' && $idLista) {
-      // Comprobación básica del token de backoffice
-      if($hoDelete === 'delete' && $idLista){
-        $this->deleteList($idLista);
-      }else{
-        $this->context->controller->errors[] = $this->l('Token de seguridad inválido');
-      }
+    // Validación básica del token (solo si hay acción)
+    if($accion && $token !== $tokenEsperado){
+      $this->context->controller->errors[] = $this->l('Token de seguridad inválido');
     }
 
-    // Procesar formulario si se envio
+    // === Acción: eliminar ===
+    if ($accion === 'delete' && $idLista && $token === $tokenEsperado) {
+      $this->deleteList($idLista);
+    }
+
+    // === Acción: editar ===
+    if($accion === 'edit' && $idLista && $token === $tokenEsperado){
+      $this->editarLista($idLista);
+    }
+
+    // Procesar formulario (crear/actualizar)
     if (((bool)Tools::isSubmit('submitHo_lista_enlacesModule')) == true) {
       $this->postProcess();
     }
@@ -170,7 +231,7 @@ class Ho_lista_enlaces extends Module {
       'listasPorHook' => $listasPorHook,
       'link' => $this->context->link,
       'module_name' => $this->name,
-      'token' => $token, 
+      'token' => $tokenEsperado, 
     ]);
 
     // Cargar la plantilla
@@ -356,6 +417,10 @@ class Ho_lista_enlaces extends Module {
           'name' => 'name',
         ],
       ],
+      [
+      'type' => 'hidden',
+      'name' => 'HO_LISTA_ENLACES_ID_LISTA',
+      ],
     ];
 
     // Secciones con listas deplegables
@@ -368,17 +433,20 @@ class Ho_lista_enlaces extends Module {
         <div class="ho-collapsible-content" style="display:none; margin-left:15px;">
     ';
 
+    $seleccionados = (array)json_decode(Configuration::get('HO_LISTA_ENLACES_URL_SELECCIONADAS', '[]'), true);
+
     foreach ($grupo['enlaces'] as $enlace) {
-        $checkbox_html .= '
-          <div>
-            <label>
-              <input type="checkbox" 
-                     name="HO_LISTA_ENLACES_URL_' . strtoupper($key) . '[]" 
-                     value="' . $enlace['id_option'] . '"
-                     class="ho-checkbox-' . $key . '"> 
-              ' . $enlace['name'] . '
-            </label>
-          </div>';
+      $checked = in_array($enlace['id_option'], $seleccionados) ? 'checked' : '';
+      $checkbox_html .= '
+        <div>
+          <label>
+            <input type="checkbox" 
+                  name="HO_LISTA_ENLACES_URL_' . strtoupper($key) . '[]" 
+                  value="' . $enlace['id_option'] . '"
+                  class="ho-checkbox-' . $key . '" ' . $checked . '> 
+            ' . $enlace['name'] . '
+          </label>
+        </div>';
     }
 
     $checkbox_html .= '</div></div>';
@@ -430,12 +498,14 @@ class Ho_lista_enlaces extends Module {
       'HO_LISTA_ENLACES_URL_ESTATICOS' => json_decode(Configuration::get('HO_LISTA_ENLACES_URL_ESTATICOS', '[]'), true),
       'HO_LISTA_ENLACES_CUSTOM_URL' => $custom['url'] ?? '',
       'HO_LISTA_ENLACES_CUSTOM_NAME' => $custom['name'] ?? '',
+      'HO_LISTA_ENLACES_IDS' => explode(',', Configuration::get('HO_LISTA_ENLACES_IDS', '')),
+      'HO_LISTA_ENLACES_ID_LISTA' => Configuration::get('HO_LISTA_ENLACES_ID_LISTA', 0),
     ];
   }
 
   /**
-   * Devuelve el nombre del enlace según la URL y el grupo
-   */
+  * Devuelve el nombre del enlace según la URL y el grupo
+  */
   private function getTitleFromUrl($grupo, $url) {
     $gruposEnlaces = $this->getEnlacesAgrupados(); // ya tienes este método
     $key = strtolower($grupo);
@@ -481,15 +551,31 @@ class Ho_lista_enlaces extends Module {
     $grupos = ['CMS', 'PRODUCTOS', 'CATEGORIAS', 'ESTATICOS'];
     
     foreach ($grupos as $grupo) {
-      $urls = Tools::getValue('HO_LISTA_ENLACES_URL_'.$grupo, []);
+      $urls = Tools::getValue('HO_LISTA_ENLACES_URL_'.$grupo, []); 
       foreach ($urls as $pos => $url) {
         $nombre = $this->getTitleFromUrl($grupo, $url);
-        Db::getInstance()->insert('enlace', [
-          'nombre' => pSQL($nombre),
-          'url'    => pSQL($url),
-          'posicion' => (int)$pos
-        ]);
-        $id_enlace = Db::getInstance()->Insert_ID();
+
+        // Verificar si el enlace ya existe
+        $id_enlace = (int)Db::getInstance()->getValue('
+          SELECT id_enlace FROM `'._DB_PREFIX_.'enlace`
+          WHERE url = "'.pSQL($url).'"
+        ');
+
+        if($id_enlace){
+          // Actualizar enlace existente
+          Db::getInstance()->update('enlace', [
+            'nombre' => pSQL($nombre),
+            'posicion' => (int)$pos
+          ], 'id_enlace = '.$id_enlace);
+        }else{
+          // Insertar nuevo enlace
+          Db::getInstance()->insert('enlace', [
+            'nombre' => pSQL($nombre),
+            'url' => pSQL($url),
+            'posicion' => (int)$pos
+          ]);
+          $id_enlace = Db::getInstance()->Insert_ID();
+        }
 
         // Relacionar con la lista
         Db::getInstance()->insert('lista_enlace_relacion', [
@@ -535,6 +621,24 @@ class Ho_lista_enlaces extends Module {
     if (!empty($enlacesPersonalizados)) {
       Configuration::updateValue('HO_LISTA_ENLACES_PERSONALIZADOS', json_encode($enlacesPersonalizados));
     }
+
+    // Guardar URLs seleccionadas para mantener checkboxes marcados al editar
+    $urlsSeleccionadas = [];
+    $grupos = ['CMS', 'PRODUCTOS', 'CATEGORIAS', 'ESTATICOS'];
+    foreach ($grupos as $grupo) {
+      $urls = Tools::getValue('HO_LISTA_ENLACES_URL_'.$grupo, []);
+      $urlsSeleccionadas = array_merge($urlsSeleccionadas, $urls);
+    }
+
+    Configuration::updateValue('HO_LISTA_ENLACES_URL_SELECCIONADAS', json_encode($urlsSeleccionadas));
+
+    // Limpiar formulario despues de guardar
+    Configuration::updateValue('HO_LISTA_ENLACES_ID_LISTA', 0);
+    Configuration::updateValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE', '');
+    Configuration::updateValue('HO_LISTA_ENLACES_HOOK', '');
+    Configuration::updateValue('HO_LISTA_ENLACES_URL_SELECCIONADAS', json_encode([]));
+    Configuration::updateValue('HO_LISTA_ENLACES_IDS', '');
+    Configuration::updateValue('HO_LISTA_ENLACES_PERSONALIZADOS', json_encode([]));
   }
 
   /**
