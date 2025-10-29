@@ -63,26 +63,51 @@ class Ho_lista_enlaces extends Module {
   * http://doc.prestashop.com/display/PS16/Enabling+the+Auto-Update
   */
   public function install() {
-    // Ejecutar intalación base del módulo
-    if(!parent::install()){
+    if (!parent::install()) {
       return false;
     }
 
-    // Ejectuar el SQL de instlación
-    if(!include(dirname(__FILE__).'/sql/install.php')){
+    // Ejecutar SQL
+    if (!include(dirname(__FILE__).'/sql/install.php')) {
       return false;
     }
 
-    // Registrar hooks necesarios
-    if(
-      !$this->registerHook('header') ||
-      !$this->registerHook('displayBackOfficeHeader') ||
-      !$this->registerHook('displayFooter')
-    ){
-      return false;
+    // Hooks básicos del BO y assets
+    $this->registerHook('header');
+    $this->registerHook('displayBackOfficeHeader');
+
+    // === Registrar TODOS los hooks display (creando los que falten) ===
+    $hooks = Db::getInstance()->executeS('
+      SELECT name FROM `'._DB_PREFIX_.'hook`
+      WHERE name LIKE "display%" 
+      AND name NOT LIKE "%Admin%" 
+      AND name NOT LIKE "%BackOffice%"
+    ');
+
+    $hooksRegistrados = array_column($hooks, 'name');
+
+    // Hooks más comunes que pueden no existir aún
+    $hooksExtra = [
+      'displayFooter', 'displayHome', 'displayTop', 'displayNav1', 'displayNav2',
+      'displayLeftColumn', 'displayRightColumn', 'displayFooterBefore',
+      'displayFooterAfter', 'displayProductExtraContent', 'displayReassurance',
+      'displayCustomerAccount', 'displayMyAccountBlock'
+    ];
+
+    foreach ($hooksExtra as $hookName) {
+      if (!in_array($hookName, $hooksRegistrados)) {
+        // Si el hook no existe, lo creamos
+        Db::getInstance()->insert('hook', ['name' => pSQL($hookName), 'title' => pSQL($hookName)]);
+        $hooksRegistrados[] = $hookName;
+      }
     }
 
-    return true;      
+    // Registrar el módulo en todos los hooks válidos
+    foreach ($hooksRegistrados as $hook) {
+      $this->registerHook($hook);
+    }
+
+    return true;
   }
 
   public function uninstall() {
@@ -659,7 +684,57 @@ class Ho_lista_enlaces extends Module {
     $this->context->controller->addCSS($this->_path.'/views/css/front.css');
   }
 
-  public function hookDisplayFooter() {
-    /* Coloca tu código aquí. */
+  /**
+  * Muestra las listas en el hook correspondiente (front)
+  */
+  public function renderListsByHook($hookName){
+    // Obtener las listas asociadas a este hook
+    $listas = Db::getInstance()->executeS('
+      SELECT * FROM `'._DB_PREFIX_.'lista_enlaces`
+      WHERE `hook` = "'.pSQL($hookName).'"
+      ORDER BY `id_lista` ASC
+    ');
+
+    // Si no hay listas para este hook, no mostramos nada
+    if (!$listas) {
+      return '';
+    }
+
+    $listasFinal = [];
+
+    foreach ($listas as $lista) {
+      // Obtener enlaces relacionados
+      $enlaces = Db::getInstance()->executeS('
+        SELECT e.nombre, e.url
+        FROM `'._DB_PREFIX_.'enlace` e
+        INNER JOIN `'._DB_PREFIX_.'lista_enlace_relacion` rel
+          ON e.id_enlace = rel.id_enlace
+        WHERE rel.id_lista = '.(int)$lista['id_lista'].'
+        ORDER BY rel.posicion ASC
+      ');
+
+      $listasFinal[] = [
+        'nombre' => $lista['nombre'],
+        'enlaces' => $enlaces,
+      ];
+    }
+
+    // Asignar a Smarty
+    $this->context->smarty->assign([
+      'listas' => $listasFinal,
+    ]);
+
+    // Renderizar plantilla
+    return $this->display(__FILE__, 'views/templates/hook/lista_enlaces.tpl');
+  }
+
+  // Metodo mágico de prestashop que captura cualquier hook automaticamente
+  public function __call($method, $args){
+    if (preg_match('/^hookDisplay(.+)/', $method, $matches)) {
+      $hookName = 'display'.$matches[1];
+      return $this->renderListsByHook($hookName);
+    }
+
+    return null;
   }
 }

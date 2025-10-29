@@ -53,7 +53,7 @@
                       </a>
                       <a href="{$link->getAdminLink('AdminModules')}&configure={$module_name}&id_lista={$lista.id_lista}&accion=delete&token={$token}" 
                         class="btn btn-danger btn-sm"
-						{* El "return" es para cancelar la accion en caso de cancelar la accion *}
+                        {* El "return" es para cancelar la accion en caso de cancelar la accion *}
                         onclick="return confirm('¿Seguro que desea eliminar esta lista?');">
                         Eliminar
                       </a>
