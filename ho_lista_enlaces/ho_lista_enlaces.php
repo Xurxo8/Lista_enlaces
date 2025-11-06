@@ -206,6 +206,26 @@ class Ho_lista_enlaces extends Module {
   }
 
   /**
+   * Limpiar los valores temporales del formulario
+   */
+  private function limpiarFormulario(){
+    // Array con las claves de configuración y sus valores "vacios"
+    $campos = [
+      'HO_LISTA_ENLACES_ID_LISTA' => 0,
+      'HO_LISTA_ENLACES_NOMBRE_BLOQUE' => '',
+      'HO_LISTA_ENLACES_HOOK' => '',
+      'HO_LISTA_ENLACES_URL_SELECCIONADAS' => json_encode([]),
+      'HO_LISTA_ENLACES_IDS' => '',
+      'HO_LISTA_ENLACES_PERSONALIZADOS' => json_encode([]),
+    ];
+
+    // Recorremos y limpiamos cada campo
+    foreach($campos as $clave => $valor){
+      Configuration::updateValue($clave, $valor);
+    }
+  }
+
+  /**
   * Carga el formulario de configuración
   */
   public function getContent() {
@@ -216,10 +236,7 @@ class Ho_lista_enlaces extends Module {
 
     // Si no se está haciendo ninguna acción, limpiar el formulario
     if (!$accion && !Tools::isSubmit('submitHo_lista_enlacesModule')) {
-      Configuration::updateValue('HO_LISTA_ENLACES_ID_LISTA', 0);
-      Configuration::updateValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE', '');
-      Configuration::updateValue('HO_LISTA_ENLACES_HOOK', '');
-      Configuration::updateValue('HO_LISTA_ENLACES_URL_SELECCIONADAS', json_encode([]));
+      $this->limpiarFormulario();
     }
 
     // Validación básica del token (solo si hay acción)
@@ -230,6 +247,9 @@ class Ho_lista_enlaces extends Module {
     // === Acción: eliminar ===
     if ($accion === 'delete' && $idLista && $token === $tokenEsperado) {
       $this->deleteList($idLista);
+
+      // Limpiar configuración temporal después de eliminar
+      $this->limpiarFormulario();
     }
 
     // === Acción: editar ===
