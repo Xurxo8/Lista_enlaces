@@ -214,6 +214,14 @@ class Ho_lista_enlaces extends Module {
     $token = Tools::getValue('token');
     $tokenEsperado = Tools::getAdminTokenLite('AdminModules');
 
+    // Si no se está haciendo ninguna acción, limpiar el formulario
+    if (!$accion && !Tools::isSubmit('submitHo_lista_enlacesModule')) {
+      Configuration::updateValue('HO_LISTA_ENLACES_ID_LISTA', 0);
+      Configuration::updateValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE', '');
+      Configuration::updateValue('HO_LISTA_ENLACES_HOOK', '');
+      Configuration::updateValue('HO_LISTA_ENLACES_URL_SELECCIONADAS', json_encode([]));
+    }
+
     // Validación básica del token (solo si hay acción)
     if($accion && $token !== $tokenEsperado){
       $this->context->controller->errors[] = $this->l('Token de seguridad inválido');
