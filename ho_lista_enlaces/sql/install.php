@@ -37,6 +37,7 @@ $sql[] = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'enlace` (
   `url` VARCHAR(512) NOT NULL,
   `nueva_ventana` TINYINT(1) NOT NULL DEFAULT 0,
   `posicion` INT UNSIGNED DEFAULT 0,
+  `personalizado` BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (`id_enlace`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;';
 

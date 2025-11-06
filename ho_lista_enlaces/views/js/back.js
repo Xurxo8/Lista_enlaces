@@ -34,7 +34,7 @@ $(document).ready(function() {
     contador++;
 
     // Crear un bloque de inputs
-    const html = `
+    const HTML = `
       <div class="custom-link-block" style="margin: 10px 0 10px 0;">
         <input type="text" name="HO_LISTA_ENLACES_CUSTOM_NAME_NEW[${contador}]" placeholder="Nombre del enlace" class="form-control" style="width:45%; display:inline-block; margin-right:5px;">
         <input type="text" name="HO_LISTA_ENLACES_CUSTOM_URL_NEW[${contador}]" placeholder="URL" class="form-control" style="width:45%; display:inline-block; margin-right:5px;">
@@ -42,7 +42,7 @@ $(document).ready(function() {
       </div>
     `;
 
-    $('#addCustomLink').before(html);
+    $('#addCustomLink').before(HTML);
   });
 
   // Eliminar enlace dinámico
@@ -52,10 +52,10 @@ $(document).ready(function() {
 
   // ===== Desplegar / contraer secciones =====
   $(document).on('click', '.ho-collapsible-header', function() {
-    const parent = $(this).closest('.ho-collapsible');
-    const content = parent.find('.ho-collapsible-content');
-    content.slideToggle(200);
-    parent.toggleClass('open');
+    const PERENT = $(this).closest('.ho-collapsible');
+    const CONTENT = PERENT.find('.ho-collapsible-content');
+    CONTENT.slideToggle(200);
+    PERENT.toggleClass('open');
   });
 
   // --- Marcar seleccionados si estaban guardados ---

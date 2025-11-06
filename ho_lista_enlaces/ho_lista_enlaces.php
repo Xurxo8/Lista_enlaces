@@ -169,35 +169,42 @@ class Ho_lista_enlaces extends Module {
 
     // Cargar los enlaces de la lista
     $enlacesSeleccionados = Db::getInstance()->executeS('
-      SELECT e.url
+      SELECT e.id_enlace, e.nombre, e.url, e.personalizado
       FROM `'._DB_PREFIX_.'enlace` e
       INNER JOIN `'._DB_PREFIX_.'lista_enlace_relacion` rel
         ON e.id_enlace = rel.id_enlace
-      WHERE rel.id_lista = '.(int)$idLista
-    );
+      WHERE rel.id_lista = '.(int)$idLista.'
+      ORDER BY rel.posicion ASC
+    ');
 
-    $urlsSeleccionadas = array_column($enlacesSeleccionados, 'url');
-    Configuration::updateValue('HO_LISTA_ENLACES_URL_SELECCIONADAS', json_encode($urlsSeleccionadas));
+    // Comprobar si se recogen correctamente los datos 
+    echo '<pre>';
+    print_r($enlacesSeleccionados);
+    echo '</pre>';
+    die();
+    // ===============================================
 
-    // Cargar los IDs de los enlaces asociados a la lista
-    $enlacesSeleccionados = Db::getInstance()->executeS('
-      SELECT id_enlace 
-      FROM `'._DB_PREFIX_.'lista_enlace_relacion`
-      WHERE id_lista = '.(int)$idLista
-    );
+    // Separar ulrs normales / personalizadas
+    $urlsSeleccionadas = [];
+    $idsEnlaces = [];
+    $enlacesPersonalizados = [];
 
-    $idsEnlaces = array_column($enlacesSeleccionados, 'id_enlace');
-    Configuration::updateValue('HO_LISTA_ENLACES_IDS', implode(',', $idsEnlaces));
+    foreach ($enlacesSeleccionados as $enlace){
+      $idsEnlaces[] = $enlace['id_enlace'];
+      $urlsSeleccionadas[] = $enlace['url'];
 
-    if (!$lista) {
-      $this->context->controller->errors[] = $this->l('No se encontró la lista seleccionada.');
-      return false;
+      if ((bool)$enlace['personalizado']){
+        $enlacesPersonalizados[] = [
+          'url' => $enlace['url'],
+          'nombre' => $enlace['nombre']
+        ];
+      }
     }
 
     // Guardamos los datos en configuración temporal (para que el formulario se precargue)
-    Configuration::updateValue('HO_LISTA_ENLACES_ID_LISTA', (int)$lista['id_lista']);
-    Configuration::updateValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE', pSQL($lista['nombre']));
-    Configuration::updateValue('HO_LISTA_ENLACES_HOOK', pSQL($lista['hook']));
+    Configuration::updateValue('HO_LISTA_ENLACES_IDS', implode(',', $idsEnlaces));
+    Configuration::updateValue('HO_LISTA_ENLACES_URLS_SELECCIONADAS', json_encode($urlsSeleccionadas));
+    Configuration::updateValue('HO_LISTA_ENLACES_PERSONALIZADOS', json_encode($urlsSeleccionadas));
 
     $this->context->controller->confirmations[] =
       sprintf($this->l('Editando la lista "%s". Modifique los valores y guarde para aplicar los cambios.'), $lista['nombre']);
@@ -625,7 +632,8 @@ class Ho_lista_enlaces extends Module {
           Db::getInstance()->insert('enlace', [
             'nombre' => pSQL($nombre),
             'url' => pSQL($url),
-            'posicion' => (int)$pos
+            'posicion' => (int)$pos,
+            'personalizado' => 0 // false
           ]);
           $id_enlace = Db::getInstance()->Insert_ID();
         }
@@ -657,7 +665,8 @@ class Ho_lista_enlaces extends Module {
         Db::getInstance()->insert('enlace', [
           'nombre' => pSQL($nombre),
           'url'    => pSQL($url),
-          'posicion' => (int)$pos
+          'posicion' => (int)$pos,
+          'personalizado' => 1 // true
         ]);
         $id_enlace = Db::getInstance()->Insert_ID();
 
