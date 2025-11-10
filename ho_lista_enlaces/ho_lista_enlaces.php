@@ -174,15 +174,7 @@ class Ho_lista_enlaces extends Module {
       INNER JOIN `'._DB_PREFIX_.'lista_enlace_relacion` rel
         ON e.id_enlace = rel.id_enlace
       WHERE rel.id_lista = '.(int)$idLista.'
-      ORDER BY rel.posicion ASC
     ');
-
-    // Comprobar si se recogen correctamente los datos 
-    echo '<pre>';
-    print_r($enlacesSeleccionados);
-    echo '</pre>';
-    die();
-    // ===============================================
 
     // Separar ulrs normales / personalizadas
     $urlsSeleccionadas = [];
@@ -195,6 +187,7 @@ class Ho_lista_enlaces extends Module {
 
       if ((bool)$enlace['personalizado']){
         $enlacesPersonalizados[] = [
+          'id_enlace' => (int)$enlace['id_enlace'],
           'url' => $enlace['url'],
           'nombre' => $enlace['nombre']
         ];
@@ -202,9 +195,12 @@ class Ho_lista_enlaces extends Module {
     }
 
     // Guardamos los datos en configuración temporal (para que el formulario se precargue)
+    Configuration::updateValue('HO_LISTA_ENLACES_ID_LISTA', (int)$lista['id_lista']);
+    Configuration::updateValue('HO_LISTA_ENLACES_NOMBRE_BLOQUE', pSQL($lista['nombre']));
+    Configuration::updateValue('HO_LISTA_ENLACES_HOOK', pSQL($lista['hook']));
     Configuration::updateValue('HO_LISTA_ENLACES_IDS', implode(',', $idsEnlaces));
     Configuration::updateValue('HO_LISTA_ENLACES_URLS_SELECCIONADAS', json_encode($urlsSeleccionadas));
-    Configuration::updateValue('HO_LISTA_ENLACES_PERSONALIZADOS', json_encode($urlsSeleccionadas));
+    Configuration::updateValue('HO_LISTA_ENLACES_PERSONALIZADOS', json_encode($enlacesPersonalizados));
 
     $this->context->controller->confirmations[] =
       sprintf($this->l('Editando la lista "%s". Modifique los valores y guarde para aplicar los cambios.'), $lista['nombre']);
@@ -213,8 +209,52 @@ class Ho_lista_enlaces extends Module {
   }
 
   /**
-   * Limpiar los valores temporales del formulario
-   */
+  * Recivir a chamada de AJAX para eliminar enlaces personalizados
+  */
+  public function eliminarEnlacePersonalizadoAJAX(){
+    // Limpiar cualquier salida previa
+    @ob_end_clean();
+    ob_start();
+    header('Content-Type: application/json');
+
+    $id_enlace = (int)Tools::getValue('id_enlace');
+
+    if(!$id_enlace){
+      die(json_encode([
+        'success' => false,
+        'message' => 'ID de enlace no válido'
+      ]));
+    }
+
+    // si existen, elimina las relaciones
+    Db::getInstance()->delete('lista_enlace_relacion', 'id_enlace = '.(int)$id_enlace);
+
+    // Luego elimina el enlace en sí
+    $eliminado = Db::getInstance()->delete('enlace', 'id_enlace = '.(int)$id_enlace);
+
+    if($eliminado){
+      die(json_encode([
+        'success' => true,
+        'message' => 'Enlace eliminado correctamente'
+      ]));
+    }else{
+      die(json_encode([
+        'success' => false,
+        'message' => 'Error al eliminar el enlace de la base de datos'
+      ]));
+    }
+
+    echo json_encode([
+      'succes' => (bool)$eliminado,
+      'message' => $eliminado ? 'Enlace eliminado correctamente' : 'Error al eliminar el enlace'
+    ]);
+
+    exit;
+  }
+
+  /**
+  * Limpiar los valores temporales del formulario
+  */
   private function limpiarFormulario(){
     // Array con las claves de configuración y sus valores "vacios"
     $campos = [
@@ -236,6 +276,15 @@ class Ho_lista_enlaces extends Module {
   * Carga el formulario de configuración
   */
   public function getContent() {
+    // Eliminar enlaces personalizados del formulario al cargar la página
+    $personalizados = json_decode(Configuration::get('HO_LISTA_ENLACES_PERSONALZIADOS', []), true);
+
+    if(!empty($personalizados)){
+      foreach($personalizados as $enlace){
+        // Buscar el id_enlace en la tabla 'enlace' usando una URL y nombre
+      }
+    }
+
     $idLista = (int)Tools::getValue('id_lista');
     $accion = Tools::getValue('accion');
     $token = Tools::getValue('token');
@@ -518,15 +567,32 @@ class Ho_lista_enlaces extends Module {
     ];
     }
 
+    // Recuperar los enlaces personalizados guardados
+    $personalizados = json_decode(Configuration::get('HO_LISTA_ENLACES_PERSONALIZADOS', '[]'), true);
 
-    // Boton para crar los enlaces personalizado
+    // Crear HTML del contenedor y precargar enlaces existentes
+    $custom_html = '<button type="button" id="addCustomLink" class="btn btn-default" style="margin-top:10px;">'.$this->l('Añadir enlace personalizado').'</button>';
+    $custom_html .= '<div id="customLinksContainer" style="margin-top:10px;">';
+
+    foreach ($personalizados as $index => $enlace) {
+      $custom_html .= '<div class="custom-link-item" style="width: 90%; display: flex; gap: 5px; margin-bottom:10px;">
+        <input type="text" name="HO_LISTA_ENLACES_CUSTOM_NAME_NEW[]" value="'.htmlspecialchars($enlace['nombre']).'" placeholder="'.$this->l('Nombre').'">
+        <input type="text" name="HO_LISTA_ENLACES_CUSTOM_URL_NEW[]" value="'.htmlspecialchars($enlace['url']).'" placeholder="URL">
+        <button type="button" 
+          data-id-enlace="'.(int)$enlace['id_enlace'].'" 
+          class="eliminarEnlaceBD btn btn-danger btn-sm">
+          Eliminar
+        </button>
+      </div>';
+    }
+
+    $custom_html .= '</div>';
+
+    // Añadir al formulario
     $inputs[] = [
       'type' => 'html',
       'name' => 'add_custom_link_button',
-      'html_content' => '<button type="button" id="addCustomLink" class="btn btn-default" style="margin-top:10px;">
-        '.$this->l('Añadir enlace personalizado').'
-      </button>
-      <div id="customLinksContainer" style="margin-top:10px;"></div>',
+      'html_content' => $custom_html,
     ];
 
     // ========== DEVOLVER EL FORMULARIO COMPLETO ==========
